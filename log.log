@@ -1,0 +1,2 @@
+ACC 0.82 收敛快 过拟合严重
+python train.py --esim --drop_out 0.5 --embedding_dim 256 --d_hidden 1024 --batch_size 64

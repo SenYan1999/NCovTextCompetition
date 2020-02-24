@@ -106,7 +106,7 @@ class EsimDataset(Dataset):
 
         for idx, word in enumerate(word_counter, 2):
             if word_counter[word] > min_occurance:
-                word2idx[word] = idx
+                word2idx[word] = len(word2idx)
         
         return word2idx
 

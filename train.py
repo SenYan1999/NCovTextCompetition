@@ -101,7 +101,7 @@ def main():
     if args.bert:
         model = BaseBertModel(args.bert_type, 768, args.d_hidden, args.drop_out, 2)
     elif args.esim:
-        model = ESIM(len(train_data.word2idx) * 2, args.embedding_dim, args.d_hidden, dropout=0.5, num_classes=2, device='cuda')
+        model = ESIM(len(train_data.word2idx), args.embedding_dim, args.d_hidden, dropout=0.5, num_classes=2, device='cuda')
     else:
         assert(Exception('Please input the correct model type.'))
     model =  model.to(device)

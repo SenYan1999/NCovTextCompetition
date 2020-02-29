@@ -1,0 +1,1 @@
+python evaluate.py --raw_test_data /tcdata/test.csv

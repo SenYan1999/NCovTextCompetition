@@ -28,24 +28,24 @@ def convert_source_words(source, bert_type):
 def main():
     # BERT
     if args.bert:
-        train_data = convert_source_words(args.raw_train_data, args.bert_type)
-        train_dataset = BiSentDataset(train_data, args.max_len)
-
-        dev_data = convert_source_words(args.raw_dev_data, args.bert_type)
-        dev_dataset = BiSentDataset(dev_data, args.max_len)
-
-        save_pt(train_dataset, args.train_data)
-        save_pt(dev_dataset, args.dev_data)
+        train_data = BiSentDataset(args.raw_train_data, args.max_len)
+        dev_data = BiSentDataset(args.raw_dev_data, args.max_len)
 
     # ESIM
     elif args.esim:
         train_data = EsimDataset(args.raw_train_data, args.max_len, args.min_occurance)
         dev_data = EsimDataset(args.raw_dev_data, args.max_len, args.min_occurance, word2idx=train_data.word2idx)
-        save_pt(train_data, args.train_data)
-        save_pt(dev_data, args.dev_data)
     
+    # Bert-Esim
+    elif args.bert_esim:
+        train_data = BertEsimDataset(args.raw_train_data, args.max_len)
+        dev_data = BertEsimDataset(args.raw_dev_data, args.max_len)
+
     else:
         assert(Exception('Please choose a model.'))
+
+    save_pt(train_data, args.train_data)
+    save_pt(dev_data, args.dev_data)
 
 if __name__ == '__main__':
     main()

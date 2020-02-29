@@ -1,3 +1,4 @@
 {
-    "python.pythonPath": "/home/senyan/.conda/envs/dl/bin/python"
+    "python.pythonPath": "/home/senyan/.conda/envs/dl/bin/python",
+    "python.linting.enabled": false
 }

@@ -37,15 +37,36 @@ def init_logger(filename, when='D', backCount=3,
 logger = init_logger(filename=args.log_file)
 
 class BiSentDataset(Dataset):
-    def __init__(self, data, max_len):
-        self.tokenizer = BertTokenizer.from_pretrained(args.bert_type)
-        self.sents, self.labels, self.input_idx = self.convert_data(data, max_len)
+    def __init__(self, source, max_len, test=False):
+        self.test = test
+        self.tokenizer = BertTokenizer.from_pretrained('pretrained_bert_model/vocab.txt')
+        data = self._convert_source_words(source)
+        self.idxs, self.sents, self.labels, self.input_idx = self.convert_data(data, max_len)
+
+    def _convert_source_words(self, source):
+        data = []
+
+        with open(source, 'r') as f:
+            reader = csv.reader(f)
+            for line in reader:
+                if self.test:
+                    idx, sent1, sent2, label = line[0], line[2], line[3], line[4]
+                else:
+                    idx, sent1, sent2, label = 0, line[1], line[2], line[3]
+                sent1, sent2 = self.tokenizer.tokenize(sent1), self.tokenizer.tokenize(sent2)
+                try:
+                    label = int(label)
+                except:
+                    continue
+                data.append((idx, sent1, sent2, int(label)))
+
+        return data
 
     def convert_data(self, data, max_len):
-        sents, labels, input_idx = [], [], []
+        idxs, sents, labels, input_idx = [], [], [], []
         count = 0
         for line in data:
-            sent1, sent2, label = line[0], line[1], line[2]
+            idx, sent1, sent2, label = int(line[0]), line[1], line[2], line[3]
             idx_sent = [0] * (len(sent1) + 2) + [1] * (len(sent2) + 1)
 
             sent = ['[CLS]'] + sent1 + ['[SEP]'] + sent2 + ['[SEP]']
@@ -58,15 +79,17 @@ class BiSentDataset(Dataset):
             sent = self.tokenizer.convert_tokens_to_ids(sent)
             assert len(idx_sent) == len(sent)
             
+            idxs.append(idx)
             sents.append(sent)
             labels.append(label)
             input_idx.append(idx_sent)
 
-        sents, labels, input_idx = torch.LongTensor(sents), torch.LongTensor(labels), torch.LongTensor(input_idx)
-        return sents, labels, input_idx
+        idxs, sents, labels, input_idx = torch.LongTensor(idxs), torch.LongTensor(sents), \
+            torch.LongTensor(labels), torch.LongTensor(input_idx)
+        return idxs, sents, labels, input_idx
     
     def __getitem__(self, index):
-        return (self.sents[index], self.labels[index], self.input_idx[index])
+        return (self.idxs[index], self.sents[index], self.labels[index], self.input_idx[index])
 
     def __len__(self):
         return self.sents.shape[0]
@@ -92,8 +115,8 @@ class EsimDataset(Dataset):
                     label = int(label)
                 except:
                     continue
-                sent1, sent2 = list(jieba.cut(sent1)), list(jieba.cut(sent2))
-
+                # sent1, sent2 = list(jieba.cut(sent1)), list(jieba.cut(sent2))
+                sent1, sent2 = list(sent1), list(sent2)
                 word_counter.update(sent1 + sent2)
                 data.append((sent1, sent2, label))
         
@@ -148,7 +171,71 @@ class EsimDataset(Dataset):
     def __len__(self):
         return self.sent1.shape[0]
 
+class BertEsimDataset(Dataset):
+    def __init__(self, source_file, max_len):
+        self.tokenizer = BertTokenizer.from_pretrained('pretrained_bert_model/vocab.txt')
+
+        data = self.extract_data_from_source(source_file)
+        self.sent1, self.sent1_len, self.sent2, self.sent2_len, self.labels = \
+            self.convert_data(data, max_len)
+        
+    def extract_data_from_source(self, source):
+        data = []
+
+        with open(source, 'r') as f:
+            reader = csv.reader(f)
+            for line in reader:
+                sent1, sent2, label = line[1], line[2], line[3]
+
+                try:
+                    label = int(label)
+                except:
+                    continue
+
+                sent1, sent2 = self.tokenizer.tokenize(sent1), self.tokenizer.tokenize(sent2)
+                sent1, sent2 = map(lambda x: ['[CLS]'] + x + ['[SEP]'], (sent1, sent2))
+                data.append((sent1, sent2, label))
+        
+        return data
+    
+    def convert_data(self, data, max_len):
+        sent1s, sent1_lens, sent2s, sent2_lens, labels = [], [], [], [], []
+        count = 0
+        for line in data:
+            sent1, sent2, label = line[0], line[1], line[2]
+            sent1_len, sent2_len = len(sent1), len(sent2)
+
+            if len(sent1) < max_len:
+                sent1 += ['[PAD]' for _ in range(max_len - len(sent1))]
+            else:
+                sent1 = sent1[:max_len]
+            if len(sent2) < max_len:
+                sent2 += ['[PAD]' for _ in range(max_len - len(sent2))]
+            else:
+                sent2 = sent2[:max_len]
+
+            sent1, sent2 = self.tokenizer.convert_tokens_to_ids(sent1), self.tokenizer.convert_tokens_to_ids(sent2)
+            
+            sent1s.append(sent1)
+            sent2s.append(sent2)
+            sent1_lens.append(sent1_len)
+            sent2_lens.append(sent2_len)
+            labels.append(label)
+
+        sent1s, sent1_lens, sent2s, sent2_lens, labels = \
+            torch.LongTensor(sent1s), torch.LongTensor(sent1_lens), \
+                torch.LongTensor(sent2s), torch.LongTensor(sent2_lens), \
+                    torch.LongTensor(labels)
+        return sent1s, sent1_lens, sent2s, sent2_lens, labels
+    
+    def __getitem__(self, index):
+        return (self.sent1[index], self.sent1_len[index], self.sent2[index], \
+            self.sent2_len[index], self.labels[index])
+
+    def __len__(self):
+        return self.sent1.shape[0]
+
 if __name__ == "__main__":
-    dataset = EsimDataset(args.raw_train_data, args.max_len, args.min_occurance)
+    dataset = BertEsimDataset(args.raw_train_data, args.max_len, args.min_occurance)
     print(dataset[1])
     print(len(dataset))

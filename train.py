@@ -8,17 +8,12 @@ import math
 
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from model import BaseBertModel, ESIM, BertESIM
+from model import BaseBertModel, ESIM, BertESIM, TextCNN
 from args import parser
 from utils import *
 from math import log2
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-
-def get_accuracy(pred, ground_truth):
-    pred = torch.argmax(pred, dim=-1)
-    acc = (pred == ground_truth)
-    return torch.sum(acc).item() / ground_truth.shape[0]
 
 def train_epoch(model, optimizer, scheluder, dataloader, epoch):
     logger.info('Epoch %2d: Training...' % epoch)
@@ -43,8 +38,12 @@ def train_epoch(model, optimizer, scheluder, dataloader, epoch):
         elif args.bert_esim:
             sent1, sent1_len, sent2, sent2_len, y = map(lambda x: x.to(device), batch)
             pred = model(sent1, sent1_len, sent2, sent2_len)
+        elif args.textcnn:
+            sent1, sent1_len, sent2, sent2_len, y = map(lambda x: x.to(device), batch)
+            y = y.float()
+            pred = model(sent1, sent2)
 
-        loss = F.nll_loss(pred, y)
+        loss = model.loss_fn(pred, y)
         # backword
         loss.backward()
         optimizer.step()
@@ -53,7 +52,7 @@ def train_epoch(model, optimizer, scheluder, dataloader, epoch):
         # get log
         loss_all.append(loss.item())
         loss_interval.append(loss.item())
-        acc = get_accuracy(pred, y)
+        acc = model.get_acc(pred, y)
         acc_all.append(acc)
         acc_interval.append(acc)
 
@@ -76,9 +75,13 @@ def evaluate_epoch(model, dataloader, epoch):
             elif args.bert_esim:
                 sent1, sent1_len, sent2, sent2_len, y = map(lambda x: x.to(device), batch)
                 pred = model(sent1, sent1_len, sent2, sent2_len)
-            loss = F.nll_loss(pred, y) 
+            elif args.textcnn:
+                sent1, sent1_len, sent2, sent2_len, y = map(lambda x: x.to(device), batch)
+                y = y.float()
+                pred = model(sent1, sent2)
+            loss = model.loss_fn(pred, y) 
             loss_all.append(loss.item())
-            acc.append(get_accuracy(pred, y))
+            acc.append(model.get_acc(pred, y))
     return np.mean(acc), np.mean(loss_all)
 
 def train(model, optimizer, scheduler, train_loader, val_loader, num_epoch):
@@ -95,9 +98,15 @@ def train(model, optimizer, scheduler, train_loader, val_loader, num_epoch):
         logger.info('')
 
         if acc > max_acc:
-            torch.save(model, args.model_dir)
+            save_model(model, optimizer, args.model_dir)
             max_acc = acc
 
+def save_model(model, optimizer, model_dir):
+    state_dict = {
+        'model': model.state_dict(),
+        'optimizer': optimizer.state_dict(),
+    }
+    torch.save(state_dict, model_dir)
 
 def main():
     args = parser.parse_args()
@@ -115,6 +124,9 @@ def main():
         model = ESIM(len(train_data.word2idx), args.embedding_dim, args.d_hidden, dropout=args.drop_out, num_classes=2, device='cuda')
     elif args.bert_esim:
         model = BertESIM(args.bert_type, args.embedding_dim, args.d_hidden, dropout=args.drop_out, num_classes=2, device='cuda')
+    elif args.textcnn:
+        # model = TextCNN(len(train_data.word2idx), args.embedding_dim, args.d_hidden, args.drop_out)
+        model = TextCNN(0, args.embedding_dim, args.d_hidden, args.drop_out)
     else:
         assert(Exception('Please input the correct model type.'))
     model =  model.to(device)

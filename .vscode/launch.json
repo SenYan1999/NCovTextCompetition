@@ -9,7 +9,7 @@
             "type": "python",
             "request": "launch",
             "program": "train.py",
-            "args": ["--bert_esim", "--d_hidden", "1024", "--embedding_dim", "768", "--batch_size", "24", "--lr", "1e-3", "--drop_out", "0.5"],
+            "args": ["--textcnn", "--d_hidden", "1024", "--embedding_dim", "512", "--batch_size", "48", "--lr", "1e-4", "--drop_out", "0.2"],
             "cwd":"${workspaceFolder}",
             "console": "integratedTerminal"
         },

@@ -1,5 +1,5 @@
 # from pytorch images
-FROM pytorch/pytorch
+FROM pytorch/pytorch:1.4-cuda10.1-cudnn7-devel
 
 # add this directory to docker image's root directory
 COPY ./ /tianchi

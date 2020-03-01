@@ -183,6 +183,13 @@ class BertESIM(nn.Module):
 
         return probabilities
 
+    def loss_fn(self, pred, y):
+        return F.nll_loss(pred, y)
+
+    def get_acc(self, pred, ground_truth):
+        pred = torch.argmax(pred, dim=-1)
+        acc = (pred == ground_truth)
+        return torch.sum(acc).item() / ground_truth.shape[0]
 
 def _init_esim_weights(module):
     """

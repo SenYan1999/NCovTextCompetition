@@ -6,6 +6,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--bert', action='store_true')
 parser.add_argument('--esim', action='store_true')
 parser.add_argument('--bert_esim', action='store_true')
+parser.add_argument('--textcnn', action='store_true')
 
 # data preprocess
 parser.add_argument('--raw_train_data', type=str, default='data/train.csv')
@@ -31,5 +32,5 @@ parser.add_argument('--log_file', type=str, default='log/log.log')
 parser.add_argument('--model_dir', type=str, default='save_model/model.pt')
 
 # evaluate
-parser.add_argument('--raw_test_data', type=str, default='/data/test.csv')
+parser.add_argument('--raw_test_data', type=str, default='data/test.csv')
 parser.add_argument('--out_file', type=str, default='result.csv')

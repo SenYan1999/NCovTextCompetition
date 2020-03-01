@@ -1,9 +1,13 @@
 import torch
 import csv
+from model import BaseBertModel
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from args import parser
 from utils import BiSentDataset
+
+def load_model(model):
+    model = BaseBertModel(args.bert_type, 768, 1024, 0.3, 2)
 
 args = parser.parse_args()
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
